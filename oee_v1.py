@@ -14,7 +14,7 @@ with sx:
     st.title('Arti Grafiche Reggiane e LAI')
     st.subheader('OEE Dashboard :red[v1_17.01.2025]')
 with dx:
-    st.image('/Users/Alessandro/Desktop/APP/Arti_Grafiche/Senza titolo.png')
+    st.image('https://github.com/alebelluco/AGR/blob/main/logo.png?raw=True')
 st.divider()
 
 import_config = {
