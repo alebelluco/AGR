@@ -1,3 +1,5 @@
+# QUESTA è LA VERSIONE ATTUALMENTE DISPONIBILE IN STREAMLIT
+
 import streamlit  as st 
 import pandas as pd 
 import numpy as np 
@@ -49,6 +51,25 @@ import_config = {
                         "A155_cons_M5",
                         ]
     },
+    'INCO' : {
+        'name' : 'CALENDARIO PIEGA E INCOLLA',
+        'colonne' : 30,
+        'durata' : {'T1':8, 'T2':8, 'T3':8},
+        'col_select' : [
+                        "Giorno",
+                        "Data",
+                        "Turno",
+                        "A164_cons_CTPK1",
+                        "A161_cons_CTPK2",
+                        "A165_cons_CTPK3",
+                        "A174_cons_GBOX1",
+                        "A175_cons_GBOX2",
+                        "A172_cons_ALPINA110",
+                        "A173_cons_ALPINA130",
+                        "A151_cons_FINESTRA",
+                        
+                        ]
+    }
 }
 
 path3 = st.sidebar.file_uploader('Caricare calendario')
@@ -61,7 +82,7 @@ cal['variable'] = cal['variable']+ ' '
 # SELEZIONE REPARTO E MACCHINA
 selsx, selcx, seldx = st.columns([1,1,3])
 with selsx:
-    reparto = st.selectbox('Selezionare il reparto', options=['STAM','FUST'])
+    reparto = st.selectbox('Selezionare il reparto', options=['STAM','FUST','INCO'])
 with selcx:
     placeholder = st.empty()
 
@@ -90,10 +111,11 @@ for i in range(len(v_tgt)):
     else:
         v_tgt['PROGR_COMMESSA'].iloc[i] = v_tgt['PROGR_COMMESSA'].iloc[i]
 
-#v_tgt = v_tgt[["PROGR_COMMESSA","COD_MACCHINA","VEL_MEDIA_PREV",]]
+#v_tgt = v_tgt[["PROGR_COMMESSA","COD_MACCHINA","VEL_TIRATURA_PREVISTA",]]
 v_tgt['commessa'] = v_tgt['ANNO_COMMESSA'].astype(str)+ '00' + v_tgt['PROGR_COMMESSA']
 v_tgt['key'] = (v_tgt['COD_MACCHINA'].astype(str) + v_tgt['commessa']).str.replace(" ","")
-v_tgt = v_tgt[["key","VEL_MEDIA_PREV"]]
+v_tgt = v_tgt[["key","VEL_TIRATURA_PREVISTA"]]
+#v_tgt = v_tgt[["key","VEL_TIRATURA_PREVISTA"]]
 v_tgt = v_tgt.drop_duplicates()
 
 
@@ -227,8 +249,8 @@ tbm['scarti_adj'] = tbm['QTA_SCARTI'] * tbm['ripartizione']
 tbm['key'] = (tbm['COD_MACCHINA'] + tbm['COD_COMMESSA']).str.replace(" ","")
 tbm = tbm.merge(v_tgt, how='left', left_on='key', right_on='key')
 
-tbm = tbm[tbm.VEL_MEDIA_PREV.astype(str) != 'nan']
-tbm = tbm[tbm.VEL_MEDIA_PREV != 0]
+tbm = tbm[tbm.VEL_TIRATURA_PREVISTA.astype(str) != 'nan']
+tbm = tbm[tbm.VEL_TIRATURA_PREVISTA != 0]
 #st.write(tbm)
 
 col_ragg = [
@@ -238,7 +260,7 @@ col_ragg = [
     #'check',
     'COD_COMMESSA',
     'durata_calcolata',
-    'VEL_MEDIA_PREV',
+    'VEL_TIRATURA_PREVISTA',
     'pezzi_tot',
     'tc_std',
     #'velocità'
@@ -249,7 +271,7 @@ df_vel = tbm[tbm.RAGG_ATTIVITA == 'PRODUZIONE']
 df_vel = df_vel[df_vel['durata_calcolata'] !=0 ]
 df_vel['pezzi_tot'] = df_vel['pezzi_adj'] + df_vel['scarti_adj']
 
-df_vel['tc_std'] = [1/vm for vm in df_vel['VEL_MEDIA_PREV']]
+df_vel['tc_std'] = [1/vm for vm in df_vel['VEL_TIRATURA_PREVISTA']]
 
 df_vel_agg = df_vel[col_ragg]   
 
@@ -259,7 +281,7 @@ df_vel_agg = df_vel[col_ragg]
 #st.stop()
 
 
-df_vel_agg = df_vel.groupby(by=['data','COD_MACCHINA', 'turno','COD_COMMESSA'], as_index=False).agg({'durata_calcolata': 'sum', 'VEL_MEDIA_PREV': 'mean', 'pezzi_tot':'sum', 'tc_std':'mean' })
+df_vel_agg = df_vel.groupby(by=['data','COD_MACCHINA', 'turno','COD_COMMESSA'], as_index=False).agg({'durata_calcolata': 'sum', 'VEL_TIRATURA_PREVISTA': 'mean', 'pezzi_tot':'sum', 'tc_std':'mean' })
 
 df_vel_agg['velocità'] = (df_vel_agg['tc_std']*df_vel_agg['pezzi_tot'])/df_vel_agg['durata_calcolata']
 df_vel_agg['key_agg'] = df_vel_agg['data'].astype(str) + df_vel_agg['turno'].astype(str)
@@ -270,7 +292,7 @@ df_vel_agg['key_agg'] = df_vel_agg['data'].astype(str) + df_vel_agg['turno'].ast
 with placeholder:
     macchina_select = st.multiselect('Selezionare macchina', options = df_vel_agg.COD_MACCHINA.unique())
 
-dic_reparti = {'STAM':'Stampa', 'FUST':'Fustella'}
+dic_reparti = {'STAM':'Stampa', 'FUST':'Fustella', 'INCO':'Piega Incolla'}
 st.subheader(f'KPI reparto {dic_reparti[reparto]}', divider='grey')
 
 if len(macchina_select) == 0:
@@ -287,6 +309,7 @@ df_scarti['pezzi_tot'] = tbm['pezzi_adj']+tbm['scarti_adj']
 
 df_scarti['key'] = df_scarti['data'].astype(str) + df_scarti['turno'].astype(str)
 df_scarti = df_scarti.groupby(by=['data','turno','key'], as_index=False).sum()
+df_scarti = df_scarti[df_scarti.pezzi_tot != 0]
 
 db_oee = cal[['Data','Turno','ttd','key']].copy() # non ho messo il reparto perchè devre essere filtrato a monte per tutto
 db_oee = db_oee.groupby(by=['Data','Turno','key'], as_index=False).sum()
@@ -325,10 +348,11 @@ date_range = st.slider('sleziona intervallo date', db_oee.Data.min(), db_oee.Dat
 db_oee = db_oee[(db_oee.Data > date_range[0]) & (db_oee.Data < date_range[1]) ]
 
 # valori medi
-db_oee['oee_medio'] = db_oee['OEE'].mean()
-db_oee['d_media'] = db_oee['Disponibilità'].mean()
-db_oee['v_media'] = db_oee['v_pesata'].mean()
-db_oee['q_media'] = db_oee['Qualità'].mean()
+# i turni con ttd 0 non pesano sulla media
+db_oee['oee_medio'] = db_oee[db_oee.ttd != 0]['OEE'].mean()
+db_oee['d_media'] = db_oee[db_oee.ttd != 0]['Disponibilità'].mean()
+db_oee['v_media'] = db_oee[db_oee.ttd != 0]['v_pesata'].mean()
+db_oee['q_media'] = db_oee[db_oee.ttd != 0]['Qualità'].mean()
 
 oee = go.Figure()
 dettaglio = go.Figure()
@@ -344,7 +368,7 @@ oee.update_layout(
         yaxis=dict(
             title=dict(text="OEE", font = dict(size=f_size)),
             side="left",
-            range=[0, 1.5],
+            range=[0, 1.1],
             tickformat=".0%",
             tickfont=dict(size=f_size)))
 
@@ -370,7 +394,7 @@ dettaglio.update_layout(
         yaxis=dict(
             title=dict(text="PCT", font = dict(size=f_size)),
             side="left",
-            range=[0, 1.5],
+            range=[0, 1.1],
             tickformat=".0%",
             tickfont=dict(size=f_size)))
 
@@ -395,7 +419,7 @@ if st.toggle('drill'):
     df_vel = df_vel[(df_vel.turno == turno_select) & (df_vel.data == data_select)]
     pezzi = df_vel.pezzi_tot.sum()
     durata = df_vel.durata_calcolata.sum()
-    st.dataframe(df_vel[['data','turno','inizio','fine','COD_MACCHINA','COD_COMMESSA','RAGG_ATTIVITA','durata_calcolata','pezzi_tot','VEL_MEDIA_PREV']],use_container_width=True)
+    st.dataframe(df_vel[['data','turno','inizio','fine','COD_MACCHINA','COD_COMMESSA','RAGG_ATTIVITA','durata_calcolata','pezzi_tot','VEL_TIRATURA_PREVISTA']],use_container_width=True)
     #st.subheader('OEE', divider='red')
     db_oee_print = db_oee[(db_oee.Turno.astype(int) == turno_select) & (db_oee.Data == data_select)]
     st.dataframe(db_oee_print, use_container_width=True)
@@ -407,3 +431,4 @@ tbm_disp = tbm[tbm.RAGG_ATTIVITA != 'PRODUZIONE'].copy()
 # Note
 # Ci sono righe che non trovano il valore della velocità target perchè non sono ancora chiuse nel file KPI (solitamente è riferito all'ultimo gg o in corso)
 # Tali righe sono eliminate insieme a quelle con v_tgt = 0 (ininfluenti)
+
