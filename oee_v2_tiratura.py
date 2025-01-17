@@ -14,7 +14,7 @@ st.set_page_config(layout='wide')
 sx, dx = st.columns([4,1])
 with sx:
     st.title('Arti Grafiche Reggiane e LAI')
-    st.subheader('OEE Dashboard :red[v1_17.01.2025]')
+    st.subheader('OEE Dashboard :red[v2_17.01.2025]')
 with dx:
     st.image('https://github.com/alebelluco/AGR/blob/main/logo.png?raw=True')
 st.divider()
