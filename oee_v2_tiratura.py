@@ -9,12 +9,13 @@ import plotly.graph_objects as go
 
 import datetime as dt
 from datetime import timedelta
+from utils import grafici as gh
 
 st.set_page_config(layout='wide')
 sx, dx = st.columns([4,1])
 with sx:
     st.title('Arti Grafiche Reggiane e LAI')
-    st.subheader('OEE Dashboard :red[v2_17.01.2025]')
+    st.subheader('OEE Dashboard :red[v2_7.02.2025]')
 with dx:
     st.image('https://github.com/alebelluco/AGR/blob/main/logo.png?raw=True')
 st.divider()
@@ -79,6 +80,10 @@ import_config = {
                         ]
     }
 }
+
+
+
+
 
 path3 = st.sidebar.file_uploader('Caricare calendario')
 if not path3:
@@ -145,41 +150,41 @@ tbm = tbm[tbm.COD_MACCHINA.astype(str) != 'A176 ']
 #tbm = tbm[tbm.COD_MACCHINA == 'A124 ']
 
 cols = [
-  'inizio',
-  'fine',
-  "COD_MACCHINA",
-  "DES_CLIENTE",
-  "COD_COMMESSA",
-  "CAPOCONTO",
-  "DES_ARTICOLO",
-  "NUM_FUSTELLA",
-  "TIPO_ATTIVITA",
-  "COD_DES_ATTIVITA",
-  "RAGG_ATTIVITA",
-  "DURATA_STEP",
-  "QTA_PRODOTTA",
-  "QTA_SCARTI",
-  "DES_OPERATORE",
-  "DES_REPARTO",
-  "DES_OPERATORI",
-  't1'
+'inizio',
+'fine',
+"COD_MACCHINA",
+"DES_CLIENTE",
+"COD_COMMESSA",
+"CAPOCONTO",
+"DES_ARTICOLO",
+"NUM_FUSTELLA",
+"TIPO_ATTIVITA",
+"COD_DES_ATTIVITA",
+"RAGG_ATTIVITA",
+"DURATA_STEP",
+"QTA_PRODOTTA",
+"QTA_SCARTI",
+"DES_OPERATORE",
+"DES_REPARTO",
+"DES_OPERATORI",
+'t1'
 ]
 
 cols_test = [
-  'inizio',
-  'fine',
-  'COD_COMMESSA',
-  "DES_REPARTO",
-  'COD_MACCHINA',
-  "TIPO_ATTIVITA",
-  "COD_DES_ATTIVITA",
-  "RAGG_ATTIVITA",
-  "DURATA_STEP",
-  'data',
-  'check',
-  'turno',
-  'pezzi_adj',
-  'scarti_adj',
+'inizio',
+'fine',
+'COD_COMMESSA',
+"DES_REPARTO",
+'COD_MACCHINA',
+"TIPO_ATTIVITA",
+"COD_DES_ATTIVITA",
+"RAGG_ATTIVITA",
+"DURATA_STEP",
+'data',
+'check',
+'turno',
+'pezzi_adj',
+'scarti_adj',
 ]
 
 orari_turni = {
@@ -326,10 +331,11 @@ df_vel_agg = df_vel_agg[[any(macchina in check for macchina in macchina_select) 
 df_vel = df_vel[[any(macchina in check for macchina in macchina_select) for check in df_vel.COD_MACCHINA.astype(str) ]]
 cal = cal[[any(macchina in check for macchina in macchina_select) for check in cal.variable.astype(str)]]
 
+tbm = tbm[[any(macchina in check for macchina in macchina_select) for check in tbm.COD_MACCHINA.astype(str) ]]
 df_scarti = tbm[['data','turno','pezzi_adj','scarti_adj']].copy() # include righe prod e non prod
 df_scarti['pezzi_tot'] = tbm['pezzi_adj']+tbm['scarti_adj']
 
-df_scarti['key'] = df_scarti['data'].astype(str) + df_scarti['turno'].astype(str)
+df_scarti['key'] = df_scarti['data'].astype(str) + df_scarti['turno'].astype(str)   
 df_scarti = df_scarti.groupby(by=['data','turno','key'], as_index=False).sum()
 df_scarti = df_scarti[df_scarti.pezzi_tot != 0]
 
@@ -378,15 +384,16 @@ db_oee['oee_medio'] = db_oee[db_oee.ttd != 0]['OEE'].mean()
 db_oee['d_media'] = db_oee[db_oee.ttd != 0]['Disponibilità'].mean()
 db_oee['v_media'] = db_oee[db_oee.ttd != 0]['v_pesata'].mean()
 db_oee['q_media'] = db_oee[db_oee.ttd != 0]['Qualità'].mean()
+db_oee['SMA_15'] = db_oee.OEE.rolling(15).mean()
+db_oee['SMA_45'] = db_oee.OEE.rolling(45).mean()
 
 oee = go.Figure()
-dettaglio = go.Figure()
+
 
 oee.add_trace(go.Scatter(
     x=db_oee['key_graph'],
     y=db_oee['OEE']
 ))
-
 
 f_size = 15
 oee.update_layout(
@@ -396,6 +403,35 @@ oee.update_layout(
             range=[0, db_oee.OEE.max()*1.1],
             tickformat=".0%",
             tickfont=dict(size=f_size)))
+
+
+sma = go.Figure()
+
+sma.add_trace(go.Scatter(
+    x=db_oee['key_graph'],
+    y=db_oee['SMA_15'],
+    line=dict(color='red'),
+    name='SMA_15'
+))
+
+sma.add_trace(go.Scatter(
+    x=db_oee['key_graph'],
+    y=db_oee['SMA_45'],
+    line=dict(color='white'),
+    name='SMA_45'
+))
+
+sma.update_layout(
+        yaxis=dict(
+            range=[0, db_oee.SMA_15.max() * 1.02],
+            tickformat=".0%",
+            tickfont=dict(size=f_size)))
+
+
+
+
+dettaglio = go.Figure()
+
 
 dettaglio.add_trace(go.Bar(
     x= db_oee['key_graph'],
@@ -423,8 +459,17 @@ dettaglio.update_layout(
             tickformat=".0%",
             tickfont=dict(size=f_size)))
 
-st.subheader('Andamento OEE')
-st.plotly_chart(oee, use_container_width=True)
+sx_oee, dx_oee = st.columns([2,1])
+
+with sx_oee:
+
+    st.subheader('Andamento OEE')
+    st.plotly_chart(oee, use_container_width=True)
+
+with dx_oee:
+    st.subheader('Andamento Medie mobili OEE')
+    st.plotly_chart(sma, use_container_width=True)
+
 
 st.divider()
 
@@ -433,28 +478,152 @@ st.write('Disponibilità media: {:0.2f}%'.format(db_oee.d_media.iloc[0]*100))
 st.write('Velocità media: {:0.2f}%'.format(db_oee.v_media.iloc[0]*100))
 st.write('Qualità media: {:0.2f}%'.format(db_oee.q_media.iloc[0]*100))
 st.divider()
-st.subheader('Dettglio componenti OEE')
-st.plotly_chart(dettaglio, use_container_width=True)
 
-# ANALISI DI DETTAGLIO 
-
-
-if st.toggle('Visualizza dettagli turno'):
-    data_select = st.selectbox('data', options = cal.Data.unique())
-    turno_select = st.selectbox('turno', options = [1,2,3])
-    df_vel = df_vel[(df_vel.turno == turno_select) & (df_vel.data == data_select)]
-    pezzi = df_vel.pezzi_tot.sum()
-    durata = df_vel.durata_calcolata.sum()
-    st.dataframe(df_vel[['data','turno','inizio','fine','COD_MACCHINA','COD_COMMESSA','RAGG_ATTIVITA','durata_calcolata','pezzi_tot','VEL_TIRATURA_PREVISTA']],use_container_width=True)
-    #st.subheader('OEE', divider='red')
-    db_oee_print = db_oee[(db_oee.Turno.astype(int) == turno_select) & (db_oee.Data == data_select)]
-    st.dataframe(db_oee_print, use_container_width=True)
+tab1, tab2, tab3, tab4 = st.tabs(['Dettaglio componenti','Analisi velocità', 'Perdite di disponibilità', 'TBM'])
+with tab1:
 
 
-tbm['key_disp'] = tbm['data'].astype(str) + tbm['COD_MACCHINA'] + '-'+tbm.turno.astype(str)
-tbm_disp = tbm[tbm.RAGG_ATTIVITA != 'PRODUZIONE'].copy()
+
+    st.subheader('Dettglio componenti OEE')
+    st.plotly_chart(dettaglio, use_container_width=True)
 
 
-# Note
-# Ci sono righe che non trovano il valore della velocità target perchè non sono ancora chiuse nel file KPI (solitamente è riferito all'ultimo gg o in corso)
-# Tali righe sono eliminate insieme a quelle con v_tgt = 0 (ininfluenti)
+
+    tbm['key_disp'] = tbm['data'].astype(str) + tbm['COD_MACCHINA'] + ' | '+tbm.turno.astype(str)
+    tbm_disp = tbm[tbm.RAGG_ATTIVITA != 'PRODUZIONE'].copy()
+    tbm_disp = tbm_disp[(tbm_disp.data > date_range[0]) & (tbm_disp.data < date_range[1]) ]
+
+    perdite_macchina = tbm_disp[['COD_MACCHINA','durata_calcolata']]
+    perdite_causale = tbm_disp[['COD_DES_ATTIVITA','durata_calcolata']]
+
+    
+    #st.write(tbm_disp)
+
+    # ANALISI DI DETTAGLIO 
+
+    if st.toggle('Visualizza dettagli turno'):
+        data_select = st.selectbox('data', options = cal.Data.unique())
+        turno_select = st.selectbox('turno', options = [1,2,3])
+        df_vel = df_vel[(df_vel.turno == turno_select) & (df_vel.data == data_select)]
+        pezzi = df_vel.pezzi_tot.sum()
+        durata = df_vel.durata_calcolata.sum()
+        st.dataframe(df_vel[['data','turno','inizio','fine','COD_MACCHINA','COD_COMMESSA','RAGG_ATTIVITA','durata_calcolata','pezzi_tot','VEL_TIRATURA_PREVISTA']],use_container_width=True)
+        #st.subheader('OEE', divider='red')
+        db_oee_print = db_oee[(db_oee.Turno.astype(int) == turno_select) & (db_oee.Data == data_select)]
+        st.dataframe(db_oee_print, use_container_width=True)
+
+
+with tab2:
+
+    # analisi delle velocità 
+    # raggruppamento sulle commesse
+    df_vel_focus = df_vel[['COD_MACCHINA','COD_COMMESSA','CAPOCONTO','durata_calcolata','VEL_TIRATURA_PREVISTA','pezzi_tot','tc_std']]
+
+    df_vel_focus = df_vel_focus.groupby(by=['COD_MACCHINA','COD_COMMESSA','CAPOCONTO','VEL_TIRATURA_PREVISTA','tc_std'], as_index=False).sum()
+    df_vel_focus['ton'] = df_vel_focus['tc_std'] * df_vel_focus['pezzi_tot']
+    df_vel_focus['vel'] = df_vel_focus['ton'] / df_vel_focus['durata_calcolata']
+    df_vel_focus['v_reale'] = df_vel_focus['pezzi_tot'] / df_vel_focus['durata_calcolata']
+    df_vel_focus=df_vel_focus[(df_vel_focus.vel <= 3 )]
+    sx_2, dx_2 = st.columns([1,1])
+    with sx_2:
+        st.subheader('Distribuzione delle velocità', divider='grey')
+        h_v = go.Figure(data=[go.Histogram(x=df_vel_focus.vel, histnorm='probability', marker_color='grey')])
+        h_v.add_vrect(x0=0, x1=0.3, line_width=0, fillcolor="red", opacity=0.2)
+        h_v.add_vrect(x0=1, x1=df_vel_focus.vel.max()+0.1, line_width=0, fillcolor="red", opacity=0.2)
+
+        st.plotly_chart(h_v, use_container_width=True)
+
+    with dx_2:
+        st.subheader('Dettaglio velocità fuori limite', divider='grey')
+        out = df_vel_focus[(df_vel_focus.vel >= 1 )| (df_vel_focus.vel <= 0.3)].sort_values(by='vel', ascending=False).reset_index(drop=True)
+        st.dataframe(out)
+        ut.scarica_excel(out,'v_da_analizzare.xlsx')
+
+with tab3:
+
+    f_size = 18
+    f_angle =-45
+
+    stile = {
+        'colore_barre':'#D9D9D9',
+        'colore_linea':'#CD3128',
+        'name_bar':'Durata',
+        'name_cum':'cum_pct',
+        'y_name': 'Durata [h]',
+        'y2_name': 'pct_cumulativa',
+        'tick_size':16,
+        'angle':-45
+    }
+
+
+    sx3 ,dx3 = st.columns([1,2])
+    with sx3:
+        st.subheader('Perdite per macchina')
+        st.divider()
+        #perdite_macchina 
+        pareto_macchine = gh.pareto(perdite_macchina,'COD_MACCHINA','durata_calcolata',stile)
+        pareto_macchine.update_layout(height=570)
+
+        st.plotly_chart(pareto_macchine, use_container_width=True)
+        macc_aggr = perdite_macchina.groupby(by='COD_MACCHINA').sum().sort_values(by='durata_calcolata', ascending=False)
+        #st.dataframe(macc_aggr)
+
+    with dx3:
+
+        st.subheader('Perdite per causale')
+        st.divider()
+        #perdite_causale 
+        pareto_causali = gh.pareto(perdite_causale,'COD_DES_ATTIVITA','durata_calcolata',stile)
+        pareto_causali.update_layout(height=700)
+        sx33,dx33 = st.columns([3,2])
+        with sx33:
+            st.plotly_chart(pareto_causali, use_container_width=True)
+        
+        with dx33:
+            st.write('Dettaglio')
+            st.divider()
+            caus_aggr = perdite_causale.groupby(by='COD_DES_ATTIVITA').sum().sort_values(by='durata_calcolata', ascending=False)
+            st.dataframe(caus_aggr, use_container_width=True) 
+
+with tab4:
+    top_5 = list(caus_aggr.index[:5])
+
+    top_sel = st.multiselect('Selezionare causale (nessuna selezione = tutte le causali)', options=top_5)
+    if len(top_sel) == 0:
+        top_sel = top_5
+
+    print_rank = [
+  "DATA_ORA",
+  "COD_MACCHINA",
+  "DES_CLIENTE",
+  "COD_COMMESSA",
+  "CAPOCONTO",
+  "DES_ARTICOLO",
+  "NUM_FUSTELLA",
+  "TIPO_ATTIVITA",
+  "COD_DES_ATTIVITA",
+  "RAGG_ATTIVITA",
+  "DURATA_STEP",
+  "QTA_PRODOTTA",
+  "QTA_SCARTI",
+  "DES_OPERATORE",
+  "DES_REPARTO",
+  "DES_OPERATORI",
+  "VEL_TIRATURA_PREVISTA"
+]
+    rank = tbm_disp[[any(causa in check for causa in top_sel) for check in tbm_disp.COD_DES_ATTIVITA]].sort_values(by='durata_calcolata', ascending=False)
+    st.dataframe(rank[print_rank].reset_index(drop=True))
+
+    pass
+
+
+        
+
+
+    # Note
+    # Ci sono righe che non trovano il valore della velocità target perchè non sono ancora chiuse nel file KPI (solitamente è riferito all'ultimo gg o in corso)
+    # Tali righe sono eliminate insieme a quelle con v_tgt = 0 (ininfluenti)
+    # 7/02/2025 piega incolla, vengono trovati più valori di velocità target nel file kpi lean --> manenere solo il massimo oppure fare la media prima di fare il merge
+
+    # Appunti
+    #h_v.add_vline(x=1, line_width=2, line_dash="dash", line_color="red")
