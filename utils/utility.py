@@ -2,7 +2,8 @@ import pandas as pd
 import streamlit as st
 import numpy as np
 import datetime as dt
-
+from io import BytesIO
+import xlsxwriter
 
 @st.cache_data
 def upload(path, foglio=None):
@@ -200,10 +201,11 @@ def cal_upload(path, import_config):
         for i in range(len(df_work)):
             turno = df_work.Turno.iloc[i]
             pian = df_work.value.iloc[i]
-            if pian == 'SI':
-                df_work['ttd'].iloc[i] = import_config[rep]['durata'][turno]
-            else:
-                df_work['ttd'].iloc[i] = 0
+            #if pian == 'SI':
+            #    df_work['ttd'].iloc[i] = import_config[rep]['durata'][turno]
+            #else:
+            #    df_work['ttd'].iloc[i] = 0
+            df_work['ttd'].iloc[i] = pian # 31/01/2025 modifica introdotta per prendere direttamente le ore pianificate del turno (il venerdì ce ne sono solo 4)
         frames.append(df_work)
     
     output = pd.concat(frames)
@@ -214,6 +216,18 @@ def cal_upload(path, import_config):
     #output['key'] = output['Data'].astype(str) + output['variable'] +'-'+ output.Turno
     return output
 
+def scarica_excel(df, filename):
+    output = BytesIO()
+    writer = pd.ExcelWriter(output, engine='xlsxwriter')
+    df.to_excel(writer, sheet_name='Sheet1',index=False)
+    writer.close()
+
+    st.download_button(
+        label="Download Excel workbook",
+        data=output.getvalue(),
+        file_name=filename,
+        mime="application/vnd.ms-excel"
+    )
 
 
 
