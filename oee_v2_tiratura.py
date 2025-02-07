@@ -613,6 +613,7 @@ with tab4:
 ]
     rank = tbm_disp[[any(causa in check for causa in top_sel) for check in tbm_disp.COD_DES_ATTIVITA]].sort_values(by='durata_calcolata', ascending=False)
     st.dataframe(rank[print_rank].reset_index(drop=True))
+    ut.scarica_excel(rank[print_rank],'dettaglio_fermi.xlsx')
 
     pass
 
